@@ -76,7 +76,11 @@ namespace FortniteReplayDumper
                 }
                 else if (chunkType == ReplayChunkType.Header)
                 {
-                    ReadReplayHeader(archive);
+                    //Copy over bytes
+                    _writer.Write(chunkSize);
+                    _writer.Write(archive.ReadBytes(chunkSize));
+
+                    _writer.Flush();
                 }
 
                 if (archive.Position != offset + chunkSize)
@@ -145,25 +149,6 @@ namespace FortniteReplayDumper
             _writer.Write(info.EndTime);
             _writer.Write(binaryArchive.Bytes.Length); //Decompressed checkpoint length
             _writer.Write(binaryArchive.Bytes.ToArray()); //Decompressed checkpoint
-        }
-
-        public override void ReadReplayHeader(FArchive archive)
-        {
-            //Nothing needs to be changed here, so we can copy over the bytes
-            int oldPosition = archive.Position;
-
-            base.ReadReplayHeader(archive);
-
-            int newPosition = archive.Position;
-
-            archive.Seek(oldPosition);
-
-            int bytesWritten = newPosition - oldPosition;
-
-            _writer.Write(bytesWritten);
-            _writer.Write(archive.ReadBytes(bytesWritten));
-
-            _writer.Flush();
         }
 
         public override void ReadEvent(FArchive archive)
