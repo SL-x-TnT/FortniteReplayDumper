@@ -12,6 +12,10 @@ namespace FortniteReplayDumper
 
         static void Main(string[] args)
         {
+            Console.WriteLine("=== Dumper Source: https://github.com/SL-x-TnT/FortniteReplayDumper ===");
+            Console.WriteLine("=== Parser Source: https://github.com/Shiqan/FortniteReplayDecompressor ===");
+            Console.WriteLine();
+
             if (args.Length == 0)
             {
                 HandleSavedReplays();
