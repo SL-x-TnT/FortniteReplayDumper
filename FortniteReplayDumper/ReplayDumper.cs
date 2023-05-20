@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Unreal.Core;
+using Unreal.Core.Exceptions;
 using Unreal.Core.Models;
 using Unreal.Core.Models.Enums;
 
@@ -72,7 +73,7 @@ namespace FortniteReplayDumper
                 }
                 else if (chunkType == ReplayChunkType.ReplayData)
                 {
-                    ReadReplayData(archive);
+                    ReadReplayData(archive, chunkSize);
                 }
                 else if (chunkType == ReplayChunkType.Header)
                 {
@@ -93,6 +94,7 @@ namespace FortniteReplayDumper
 
         public override void ReadReplayInfo(FArchive archive)
         {
+
             base.ReadReplayInfo(archive);
 
             _writer.Write(FileMagic);
@@ -105,17 +107,17 @@ namespace FortniteReplayDumper
             _writer.Write(Replay.Info.FriendlyName, 256, true);
             _writer.Write(Convert.ToInt32(Replay.Info.IsLive));
 
-            if(Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_RECORDED_TIMESTAMP)
+            if(Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_RECORDED_TIMESTAMP)
             {
                 _writer.Write(Replay.Info.Timestamp.ToBinary());
             }
 
-            if (Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_COMPRESSION)
+            if (Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_COMPRESSION)
             {
                 _writer.Write(0); //Disable compression
             }
 
-            if (Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_ENCRYPTION)
+            if (Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_ENCRYPTION)
             {
                 _writer.Write(0); //Disable encryption
                 _writer.WriteArray(new byte[32], _writer.Write); //Write empty key
@@ -139,7 +141,7 @@ namespace FortniteReplayDumper
             int infoSize = archive.Position - startPosition;
 
             using var decrypted = (Unreal.Core.BinaryReader)DecryptBuffer(archive, info.SizeInBytes);
-            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decrypted, decrypted.Bytes.Length);
+            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decrypted);
 
             _writer.Write(infoSize + binaryArchive.Bytes.Length); //Chunk Size
             _writer.Write(info.Id);
@@ -179,37 +181,39 @@ namespace FortniteReplayDumper
             _writer.Write(decryptedReader.Bytes.ToArray()); //Decrypted bytes
         }
 
-        public override void ReadReplayData(FArchive archive)
+        public override void ReadReplayData(FArchive archive, int fallbackChunkSize)
         {
             int startPosition = archive.Position;
 
             var info = new ReplayDataInfo();
 
-            if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES)
+            if (archive.ReplayVersion.HasFlag(ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES))
             {
                 info.Start = archive.ReadUInt32();
                 info.End = archive.ReadUInt32();
-                info.Length = archive.ReadUInt32();
+                info.Length = (int) archive.ReadUInt32();
             }
             else
             {
-                info.Length = archive.ReadUInt32();
+                info.Length = fallbackChunkSize;
             }
 
             int memorySizeInBytes = (int)info.Length;
 
-            if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_ENCRYPTION)
+            if (archive.ReplayVersion.HasFlag(ReplayVersionHistory.HISTORY_ENCRYPTION))
             {
                 memorySizeInBytes = archive.ReadInt32();
             }
 
             int infoSize = archive.Position - startPosition;
 
-            using var decryptedReader = DecryptBuffer(archive, (int)info.Length);
-            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decryptedReader, memorySizeInBytes);
+
+            using var decrypted = (Unreal.Core.BinaryReader)DecryptBuffer(archive, info.Length);
+            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decrypted);
+
 
             //Chunk size
-            _writer.Write(infoSize + binaryArchive.Bytes.Length);
+            _writer.Write(infoSize + memorySizeInBytes);
 
             if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES)
             {
@@ -226,7 +230,7 @@ namespace FortniteReplayDumper
             {
                 _writer.Write(binaryArchive.Bytes.Length);
             }
-
+ 
             _writer.Write(binaryArchive.Bytes.ToArray());
         }
     }
