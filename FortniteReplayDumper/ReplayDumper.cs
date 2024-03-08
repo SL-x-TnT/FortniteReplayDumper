@@ -230,7 +230,7 @@ namespace FortniteReplayDumper
             using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decryptedReader);
 
             //Chunk size
-            _writer.Write(infoSize + memorySizeInBytes);
+            _writer.Write(infoSize + binaryArchive.Bytes.Length);
 
             if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES)
             {
