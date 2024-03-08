@@ -94,11 +94,32 @@ namespace FortniteReplayDumper
 
         public override void ReadReplayInfo(FArchive archive)
         {
+            //8 bytes for the FileMagic and ReplayVersion
+            int startPosition = archive.Position + 8;
 
             base.ReadReplayInfo(archive);
 
+            int endPosition = archive.Position;
+
             _writer.Write(FileMagic);
             _writer.Write((uint)archive.ReplayVersion);
+
+            if(archive.ReplayVersion >= ReplayVersionHistory.HISTORY_CUSTOM_VERSIONS)
+            {
+                archive.Seek(startPosition);
+
+                var customVersionLength = archive.ReadUInt32();
+
+                _writer.Write(customVersionLength);
+
+                // version guid -> 16 bytes
+                // version -> 4 bytes
+                var customVersions = archive.ReadBytes(customVersionLength * 20);
+
+                _writer.Write(customVersions);
+
+                archive.Seek(endPosition);
+            }
 
             //ReplayInfo
             _writer.Write(Replay.Info.LengthInMs);
@@ -191,26 +212,22 @@ namespace FortniteReplayDumper
             {
                 info.Start = archive.ReadUInt32();
                 info.End = archive.ReadUInt32();
-                info.Length = (int) archive.ReadUInt32();
+                info.Length = archive.ReadInt32();
             }
             else
             {
                 info.Length = fallbackChunkSize;
             }
 
-            int memorySizeInBytes = (int)info.Length;
-
-            if (archive.ReplayVersion.HasFlag(ReplayVersionHistory.HISTORY_ENCRYPTION))
+            if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_ENCRYPTION)
             {
-                memorySizeInBytes = archive.ReadInt32();
+                var _ = archive.ReadInt32();
             }
 
             int infoSize = archive.Position - startPosition;
 
-
-            using var decrypted = (Unreal.Core.BinaryReader)DecryptBuffer(archive, info.Length);
-            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decrypted);
-
+            using var decryptedReader = DecryptBuffer(archive, info.Length);
+            using var binaryArchive = (Unreal.Core.BinaryReader)Decompress(decryptedReader);
 
             //Chunk size
             _writer.Write(infoSize + memorySizeInBytes);
