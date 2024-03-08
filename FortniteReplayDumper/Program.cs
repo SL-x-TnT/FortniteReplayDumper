@@ -42,7 +42,7 @@ namespace FortniteReplayDumper
 
             List<Tuple<string, Action>> options = new List<Tuple<string, Action>>();
 
-            string[] replays = Directory.GetFiles(demoFolder);
+            string[] replays = Directory.GetFiles(demoFolder, "*.replay");
 
             options.Add(new Tuple<string, Action>("All", () =>
                 {
@@ -62,7 +62,7 @@ namespace FortniteReplayDumper
 
             for (int i =0; i < options.Count;i++)
             {
-                Console.WriteLine($"{i + 1}: {options[i].Item1}");
+                Console.WriteLine($"{i}: {options[i].Item1}");
             }
 
             int choice = -1;
@@ -77,10 +77,7 @@ namespace FortniteReplayDumper
                 {
                     choice = -1;
                 }
-                else
-                {
-                    choice--;
-                }
+
             } while (choice < 0 || choice >= options.Count);
 
             Console.Clear();
@@ -105,8 +102,7 @@ namespace FortniteReplayDumper
 
                 FileInfo fileInfo = new FileInfo(file);
 
-                Directory.CreateDirectory(Path.Combine(fileInfo.Directory.FullName, "Dumped"));
-                string destinationFile = Path.Combine(fileInfo.Directory.FullName, "Dumped", fileInfo.Name);
+                string destinationFile = Path.Combine(fileInfo.Directory.FullName, "dumped_" + fileInfo.Name);
 
                 _dumper.DumpReplay(file, destinationFile);
 

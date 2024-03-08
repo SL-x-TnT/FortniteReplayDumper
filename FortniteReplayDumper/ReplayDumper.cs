@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Unreal.Core;
+using Unreal.Core.Exceptions;
 using Unreal.Core.Models;
 using Unreal.Core.Models.Enums;
 
@@ -127,17 +128,17 @@ namespace FortniteReplayDumper
             _writer.Write(Replay.Info.FriendlyName, 256, true);
             _writer.Write(Convert.ToInt32(Replay.Info.IsLive));
 
-            if(Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_RECORDED_TIMESTAMP)
+            if(Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_RECORDED_TIMESTAMP)
             {
                 _writer.Write(Replay.Info.Timestamp.ToBinary());
             }
 
-            if (Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_COMPRESSION)
+            if (Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_COMPRESSION)
             {
                 _writer.Write(0); //Disable compression
             }
 
-            if (Replay.Info.FileVersion >= Unreal.Core.Models.ReplayVersionHistory.HISTORY_ENCRYPTION)
+            if (Replay.Info.FileVersion >= ReplayVersionHistory.HISTORY_ENCRYPTION)
             {
                 _writer.Write(0); //Disable encryption
                 _writer.WriteArray(new byte[32], _writer.Write); //Write empty key
@@ -207,7 +208,7 @@ namespace FortniteReplayDumper
 
             var info = new ReplayDataInfo();
 
-            if (archive.ReplayVersion >= ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES)
+            if (archive.ReplayVersion.HasFlag(ReplayVersionHistory.HISTORY_STREAM_CHUNK_TIMES))
             {
                 info.Start = archive.ReadUInt32();
                 info.End = archive.ReadUInt32();
@@ -246,7 +247,7 @@ namespace FortniteReplayDumper
             {
                 _writer.Write(binaryArchive.Bytes.Length);
             }
-
+ 
             _writer.Write(binaryArchive.Bytes.ToArray());
         }
     }
