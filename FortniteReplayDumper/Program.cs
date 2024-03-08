@@ -102,8 +102,7 @@ namespace FortniteReplayDumper
 
                 FileInfo fileInfo = new FileInfo(file);
 
-                Directory.CreateDirectory(Path.Combine(fileInfo.Directory.FullName, "Dumped"));
-                string destinationFile = Path.Combine(fileInfo.Directory.FullName, "Dumped", fileInfo.Name);
+                string destinationFile = Path.Combine(fileInfo.Directory.FullName, "dumped_" + fileInfo.Name);
 
                 _dumper.DumpReplay(file, destinationFile);
 
